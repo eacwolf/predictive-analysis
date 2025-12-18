@@ -6,50 +6,56 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* GET */
-app.get("/api/candidates", (req, res) => {
-    db.query("SELECT * FROM cadidatedetails", (err, rows) => {
-        if (err) return res.status(500).json(err);
+/* =========================
+   GET all candidates
+========================= */
+app.get("/api/candidates", async (req, res) => {
+    try {
+        const [rows] = await db.query("SELECT * FROM cadidatedetails");
         res.json(rows);
-    });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-/* ADD */
-app.post("/api/candidates", (req, res) => {
+/* =========================
+   UPDATE candidate
+========================= */
+app.put("/api/candidates/:id", async (req, res) => {
+    const { id } = req.params;
     const { CNTname, CNDmobilenumber, CNDemail, CNDskills } = req.body;
 
-    const sql = `
-    INSERT INTO cadidatedetails
-    (CNTname, CNDmobilenumber, CNDemail, CNDskills)
-    VALUES (?, ?, ?, ?)
-  `;
+    try {
+        await db.query(
+            `UPDATE cadidatedetails 
+       SET CNTname=?, CNDmobilenumber=?, CNDemail=?, CNDskills=?
+       WHERE id=?`,
+            [CNTname, CNDmobilenumber, CNDemail, CNDskills, id]
+        );
 
-    db.query(sql, [CNTname, CNDmobilenumber, CNDemail, CNDskills], (err, result) => {
-        if (err) return res.status(500).json(err);
-        res.json({ id: result.insertId });
-    });
+        res.json({ message: "Updated successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-/* UPDATE */
-app.put("/api/candidates/:id", (req, res) => {
-    const { CNTname, CNDmobilenumber, CNDemail, CNDskills } = req.body;
-
-    const sql = `
-    UPDATE cadidatedetails
-    SET CNTname=?, CNDmobilenumber=?, CNDemail=?, CNDskills=?
-    WHERE id=?
-  `;
-
-    db.query(
-        sql,
-        [CNTname, CNDmobilenumber, CNDemail, CNDskills, req.params.id],
-        (err, result) => {
-            if (err) return res.status(500).json(err);
-            res.json({ updated: result.affectedRows });
-        }
-    );
+/* =========================
+   DELETE candidate
+========================= */
+app.delete("/api/candidates/:id", async (req, res) => {
+    try {
+        await db.query("DELETE FROM cadidatedetails WHERE id=?", [
+            req.params.id,
+        ]);
+        res.json({ message: "Deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
-app.listen(5000, () =>
-    console.log("🚀 Backend running on http://localhost:5000")
-);
+/* =========================
+   START SERVER
+========================= */
+app.listen(5000, () => {
+    console.log("🚀 Backend running on http://localhost:5000");
+});
