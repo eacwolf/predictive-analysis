@@ -1,52 +1,83 @@
 import { useEffect, useState } from "react";
 
-type Candidate = {
-  id: number;
-  CNTname: string;
-  CNDmobilenumber: string;
-  CNDemail: string;
-  CNDskills: string;
-};
-
 const Dashboard = () => {
-  const [data, setData] = useState<Candidate[]>([]);
+  const [rows, setRows] = useState<any[]>([]);
+  const [newRow, setNewRow] = useState({
+    CNTname: "",
+    CNDmobilenumber: "",
+    CNDemail: "",
+    CNDskills: "",
+  });
 
-  useEffect(() => {
+  const loadData = () => {
     fetch("http://localhost:5000/api/candidates")
       .then((res) => res.json())
-      .then((result) => {
-        console.log("BACKEND DATA:", result);
-        setData(result);
-      })
-      .catch((err) => console.error(err));
-  }, []);
+      .then(setRows);
+  };
+
+  useEffect(loadData, []);
+
+  const updateRow = (id: number, field: string, value: string) => {
+    setRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+    );
+  };
+
+  const saveRow = (row: any) => {
+    fetch(`http://localhost:5000/api/candidates/${row.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(row),
+    }).then(loadData);
+  };
+
+  const addRow = () => {
+    fetch("http://localhost:5000/api/candidates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newRow),
+    }).then(() => {
+      setNewRow({ CNTname: "", CNDmobilenumber: "", CNDemail: "", CNDskills: "" });
+      loadData();
+    });
+  };
 
   return (
-    <div>
-      <h2>Candidate Dashboard</h2>
-
-      <table border={1} cellPadding={8} cellSpacing={0} width="100%">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Mobile</th>
-            <th>Email</th>
-            <th>Skills</th>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th><th>Mobile</th><th>Email</th><th>Skills</th><th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.id}>
+            {["CNTname", "CNDmobilenumber", "CNDemail", "CNDskills"].map((f) => (
+              <td key={f}>
+                <input
+                  value={r[f]}
+                  onChange={(e) => updateRow(r.id, f, e.target.value)}
+                />
+              </td>
+            ))}
+            <td><button onClick={() => saveRow(r)}>Save</button></td>
           </tr>
-        </thead>
-
-        <tbody>
-          {data.map((row) => (
-            <tr key={row.id}>
-              <td>{row.CNTname}</td>
-              <td>{row.CNDmobilenumber}</td>
-              <td>{row.CNDemail}</td>
-              <td>{row.CNDskills}</td>
-            </tr>
+        ))}
+        <tr>
+          {Object.keys(newRow).map((f) => (
+            <td key={f}>
+              <input
+                value={(newRow as any)[f]}
+                onChange={(e) =>
+                  setNewRow({ ...newRow, [f]: e.target.value })
+                }
+              />
+            </td>
           ))}
-        </tbody>
-      </table>
-    </div>
+          <td><button onClick={addRow}>Add</button></td>
+        </tr>
+      </tbody>
+    </table>
   );
 };
 

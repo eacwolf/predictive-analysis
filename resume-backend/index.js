@@ -1,39 +1,55 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import db from "./db.js";
-
-dotenv.config();
+const express = require("express");
+const cors = require("cors");
+const db = require("./db");
 
 const app = express();
-const PORT = 5000;
-
 app.use(cors());
 app.use(express.json());
 
-/**
- * ✅ FETCH CANDIDATES (NO RENAMING)
- * Column names EXACTLY match MySQL
- */
-app.get("/api/candidates", async (req, res) => {
-    try {
-        const [rows] = await db.query(`
-      SELECT 
-        CNTname,
-        CNDmobilenumber,
-        CNDemail,
-        CNDskills,
-        id
-      FROM cadidatedetails
-    `);
-
+/* GET */
+app.get("/api/candidates", (req, res) => {
+    db.query("SELECT * FROM cadidatedetails", (err, rows) => {
+        if (err) return res.status(500).json(err);
         res.json(rows);
-    } catch (err) {
-        console.error("❌ Fetch error:", err);
-        res.status(500).json({ error: "Database fetch failed" });
-    }
+    });
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 Backend running on http://localhost:${PORT}`);
+/* ADD */
+app.post("/api/candidates", (req, res) => {
+    const { CNTname, CNDmobilenumber, CNDemail, CNDskills } = req.body;
+
+    const sql = `
+    INSERT INTO cadidatedetails
+    (CNTname, CNDmobilenumber, CNDemail, CNDskills)
+    VALUES (?, ?, ?, ?)
+  `;
+
+    db.query(sql, [CNTname, CNDmobilenumber, CNDemail, CNDskills], (err, result) => {
+        if (err) return res.status(500).json(err);
+        res.json({ id: result.insertId });
+    });
 });
+
+/* UPDATE */
+app.put("/api/candidates/:id", (req, res) => {
+    const { CNTname, CNDmobilenumber, CNDemail, CNDskills } = req.body;
+
+    const sql = `
+    UPDATE cadidatedetails
+    SET CNTname=?, CNDmobilenumber=?, CNDemail=?, CNDskills=?
+    WHERE id=?
+  `;
+
+    db.query(
+        sql,
+        [CNTname, CNDmobilenumber, CNDemail, CNDskills, req.params.id],
+        (err, result) => {
+            if (err) return res.status(500).json(err);
+            res.json({ updated: result.affectedRows });
+        }
+    );
+});
+
+app.listen(5000, () =>
+    console.log("🚀 Backend running on http://localhost:5000")
+);
