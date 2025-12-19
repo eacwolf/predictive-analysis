@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 interface Candidate {
-  id: number;
+  id: number | null;
   CNTname: string;
   CNDmobilenumber: string;
   CNDemail: string;
@@ -65,28 +65,64 @@ const Dashboard = () => {
   };
 
   const handleChange = (
-    id: number,
+    row: Candidate,
     field: keyof Candidate,
     value: string
   ) => {
     setFiltered((prev) =>
-      prev.map((row) =>
-        row.id === id ? { ...row, [field]: value } : row
-      )
+      prev.map((r) => (r === row ? { ...r, [field]: value } : r))
     );
   };
 
+  const addCandidate = () => {
+    const newRow: Candidate = {
+      id: null,
+      CNTname: "",
+      CNDmobilenumber: "",
+      CNDemail: "",
+      CNDskills: "",
+    };
+
+    setFiltered((prev) => [...prev, newRow]);
+  };
+
   const saveRow = async (row: Candidate) => {
-    await axios.put(`http://localhost:5000/api/candidates/${row.id}`, row);
+    if (row.id === null) {
+      // INSERT
+      const res = await axios.post(
+        "http://localhost:5000/api/candidates",
+        row
+      );
+
+      setFiltered((prev) =>
+        prev.map((r) => (r === row ? res.data : r))
+      );
+      setData((prev) => [...prev, res.data]);
+    } else {
+      // UPDATE
+      await axios.put(
+        `http://localhost:5000/api/candidates/${row.id}`,
+        row
+      );
+    }
+
     alert("Saved");
   };
 
-  const deleteRow = async (id: number) => {
+  const deleteRow = async (row: Candidate) => {
+    if (row.id === null) {
+      setFiltered((prev) => prev.filter((r) => r !== row));
+      return;
+    }
+
     if (!window.confirm("Delete this row?")) return;
 
-    await axios.delete(`http://localhost:5000/api/candidates/${id}`);
-    setFiltered((prev) => prev.filter((r) => r.id !== id));
-    setData((prev) => prev.filter((r) => r.id !== id));
+    await axios.delete(
+      `http://localhost:5000/api/candidates/${row.id}`
+    );
+
+    setFiltered((prev) => prev.filter((r) => r.id !== row.id));
+    setData((prev) => prev.filter((r) => r.id !== row.id));
   };
 
   return (
@@ -95,7 +131,6 @@ const Dashboard = () => {
         <div className="dashboard-header">
           <h2>Candidate Dashboard</h2>
 
-          {/* FILTER BUTTON */}
           <div className="filter-wrapper">
             <button
               className="filter-btn"
@@ -117,7 +152,10 @@ const Dashboard = () => {
 
                 <div className="filter-field">
                   <label>Age</label>
-                  <select value={age} onChange={(e) => setAge(e.target.value)}>
+                  <select
+                    value={age}
+                    onChange={(e) => setAge(e.target.value)}
+                  >
                     <option value="">All</option>
                     {[20, 25, 30, 35, 40].map((a) => (
                       <option key={a} value={a}>
@@ -165,14 +203,23 @@ const Dashboard = () => {
                 <th>Actions</th>
               </tr>
             </thead>
+
             <tbody>
-              {filtered.map((row) => (
-                <tr key={row.id}>
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: "center" }}>
+                    No data. Click “Add Candidate”.
+                  </td>
+                </tr>
+              )}
+
+              {filtered.map((row, index) => (
+                <tr key={row.id ?? index}>
                   <td>
                     <input
                       value={row.CNTname}
                       onChange={(e) =>
-                        handleChange(row.id, "CNTname", e.target.value)
+                        handleChange(row, "CNTname", e.target.value)
                       }
                     />
                   </td>
@@ -180,7 +227,11 @@ const Dashboard = () => {
                     <input
                       value={row.CNDmobilenumber}
                       onChange={(e) =>
-                        handleChange(row.id, "CNDmobilenumber", e.target.value)
+                        handleChange(
+                          row,
+                          "CNDmobilenumber",
+                          e.target.value
+                        )
                       }
                     />
                   </td>
@@ -188,7 +239,7 @@ const Dashboard = () => {
                     <input
                       value={row.CNDemail}
                       onChange={(e) =>
-                        handleChange(row.id, "CNDemail", e.target.value)
+                        handleChange(row, "CNDemail", e.target.value)
                       }
                     />
                   </td>
@@ -196,13 +247,16 @@ const Dashboard = () => {
                     <input
                       value={row.CNDskills}
                       onChange={(e) =>
-                        handleChange(row.id, "CNDskills", e.target.value)
+                        handleChange(row, "CNDskills", e.target.value)
                       }
                     />
                   </td>
                   <td className="actions">
                     <button onClick={() => saveRow(row)}>Save</button>
-                    <button className="delete" onClick={() => deleteRow(row.id)}>
+                    <button
+                      className="delete"
+                      onClick={() => deleteRow(row)}
+                    >
                       Delete
                     </button>
                   </td>
@@ -210,6 +264,11 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* ADD BUTTON */}
+        <div style={{ marginTop: "16px", textAlign: "center" }}>
+          <button onClick={addCandidate}>➕ Add Candidate</button>
         </div>
       </div>
     </div>

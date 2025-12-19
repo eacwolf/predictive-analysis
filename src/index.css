@@ -44,16 +44,17 @@ button.delete {
   color: white;
   border: none;
 }
+
 .filter-bar {
-    display: flex;
-  
-    margin-bottom: 15px;
+  display: flex;
+  margin-bottom: 15px;
 }
 
 .filter-bar input,
 .filter-bar select {
-    padding: 6px;
+  padding: 6px;
 }
+
 .dashboard-header {
   display: flex;
   justify-content: space-between;
@@ -112,6 +113,7 @@ button.delete {
   border-radius: 4px;
   cursor: pointer;
 }
+
 body {
   background: white;
   color: black;
@@ -130,6 +132,7 @@ input {
   color: black;
   background: white;
 }
+
 .dashboard-page {
   min-height: 100vh;
   background: #f0f2f5;
@@ -233,4 +236,125 @@ input {
 .actions .delete {
   background: #e53935;
   color: white;
+}
+/* =========================
+   FORCE DASHBOARD CENTERING
+   ========================= */
+
+.dashboard-page {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+}
+
+.dashboard-card {
+  margin: 0 auto;
+}
+
+/* If dashboard-wrapper is used anywhere */
+.dashboard-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Center table inside dashboard */
+.table-wrapper,
+table {
+  margin-left: auto;
+  margin-right: auto;
+}
+/* =====================================
+   PROFESSIONAL SOLID DASHBOARD OVERRIDES
+   ===================================== */
+
+/* Page background stays neutral */
+.dashboard-page {
+  background: #f4f6f8;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+/* Solid centered container */
+.dashboard-card {
+  width: 100%;
+  max-width: 1100px;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 6px; /* subtle, not flashy */
+  box-shadow: none;   /* solid professional look */
+  border: 1px solid #ddd;
+}
+
+/* Header clean & simple */
+.dashboard-header {
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+/* Remove any underline / decoration */
+.dashboard-title,
+h2 {
+  text-decoration: none;
+  border: none;
+  margin: 0;
+}
+
+/* Table centered and clean */
+.table-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.data-table,
+table {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+/* Table header – solid, no fancy effects */
+th {
+  background: #f2f2f2;
+  font-weight: 600;
+  border-bottom: 1px solid #ccc;
+}
+
+/* Table cells */
+td {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+/* Inputs inside table */
+table input {
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 6px;
+  box-shadow: none;
+}
+
+/* Buttons – professional, flat */
+button {
+  box-shadow: none;
+  text-decoration: none;
+}
+
+.actions button {
+  background: #2f5597;
+  color: white;
+}
+
+.actions .delete {
+  background: #a61d24;
+}
+
+/* Remove hover fancy effects if any */
+button:hover {
+  opacity: 0.9;
 }
