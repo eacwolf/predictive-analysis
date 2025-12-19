@@ -44,3 +44,193 @@ button.delete {
   color: white;
   border: none;
 }
+.filter-bar {
+    display: flex;
+  
+    margin-bottom: 15px;
+}
+
+.filter-bar input,
+.filter-bar select {
+    padding: 6px;
+}
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.filter-wrapper {
+  position: relative;
+}
+
+.filter-btn {
+  background: #1877f2;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.filter-dropdown {
+  position: absolute;
+  right: 0;
+  top: 45px;
+  background: white;
+  padding: 16px;
+  width: 260px;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+  z-index: 100;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.filter-field input,
+.filter-field select {
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.filter-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filter-actions button {
+  background: #e4e6eb;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+body {
+  background: white;
+  color: black;
+}
+
+table {
+  background: white;
+  color: black;
+}
+
+td, th {
+  color: black;
+}
+
+input {
+  color: black;
+  background: white;
+}
+.dashboard-page {
+  min-height: 100vh;
+  background: #f0f2f5;
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+
+.dashboard-card {
+  width: 100%;
+  max-width: 1200px;
+  background: white;
+  padding: 24px;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+}
+
+.dashboard-title {
+  margin-bottom: 20px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.filter-panel {
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  background: #f7f8fa;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.clear-btn {
+  padding: 7px 14px;
+  background: #e4e6eb;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.data-table th {
+  background: #f5f6f7;
+  padding: 10px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 1px solid #ddd;
+}
+
+.data-table td {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.data-table input {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.actions button:first-child {
+  background: #1877f2;
+  color: white;
+}
+
+.actions .delete {
+  background: #e53935;
+  color: white;
+}
