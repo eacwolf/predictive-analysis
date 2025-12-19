@@ -1,81 +1,97 @@
-const express = require("express");
-const mysql = require("mysql2");
-const cors = require("cors");
 require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const db = require("./db");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* DB CONNECTION */
-const db = mysql.createConnection({
-    host: process.env.DB_HOST || "localhost",
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-    database: process.env.DB_NAME || "cadidatedb",
-});
-
-/* CONNECT */
-db.connect((err) => {
-    if (err) {
-        console.error("❌ MySQL Error:", err);
-        return;
+/* ===============================
+   GET ALL CADIDATES
+================================ */
+app.get("/api/cadidates", async (req, res) => {
+    try {
+        const [rows] = await db.promise().query(
+            `SELECT 
+        id,
+        CNTname,
+        role,
+        CNDmobilenumber,
+        CNDemail,
+        CNDskills
+       FROM cadidatedetails`
+        );
+        res.json(rows);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "DB fetch error" });
     }
-    console.log("✅ MySQL Connected");
 });
 
-/* GET ALL */
-app.get("/api/candidates", async (req, res) => {
-    const [rows] = await db.promise().query(
-        "SELECT * FROM cadidatedetails"
-    );
-    res.json(rows);
+/* ===============================
+   ADD CADIDATE
+================================ */
+app.post("/api/cadidates", async (req, res) => {
+    const { CNTname, role, CNDmobilenumber, CNDemail, CNDskills } = req.body;
+
+    try {
+        const [result] = await db.promise().query(
+            `INSERT INTO cadidatedetails
+       (CNTname, role, CNDmobilenumber, CNDemail, CNDskills)
+       VALUES (?, ?, ?, ?, ?)`,
+            [CNTname, role, CNDmobilenumber, CNDemail, CNDskills]
+        );
+
+        res.json({ id: result.insertId });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Insert failed" });
+    }
 });
 
-/* ADD NEW */
-app.post("/api/candidates", async (req, res) => {
-    const { CNTname, CNDmobilenumber, CNDemail, CNDskills } = req.body;
-
-    const [result] = await db.promise().query(
-        `INSERT INTO cadidatedetails 
-     (CNTname, CNDmobilenumber, CNDemail, CNDskills)
-     VALUES (?, ?, ?, ?)`,
-        [CNTname, CNDmobilenumber, CNDemail, CNDskills]
-    );
-
-    const [rows] = await db.promise().query(
-        "SELECT * FROM cadidatedetails WHERE id = ?",
-        [result.insertId]
-    );
-
-    res.json(rows[0]);
-});
-
-/* UPDATE */
-app.put("/api/candidates/:id", async (req, res) => {
+/* ===============================
+   UPDATE CADIDATE
+================================ */
+app.put("/api/cadidates/:id", async (req, res) => {
     const { id } = req.params;
-    const { CNTname, CNDmobilenumber, CNDemail, CNDskills } = req.body;
+    const { CNTname, role, CNDmobilenumber, CNDemail, CNDskills } = req.body;
 
-    await db.promise().query(
-        `UPDATE cadidatedetails
-     SET CNTname=?, CNDmobilenumber=?, CNDemail=?, CNDskills=?
-     WHERE id=?`,
-        [CNTname, CNDmobilenumber, CNDemail, CNDskills, id]
-    );
+    try {
+        await db.promise().query(
+            `UPDATE cadidatedetails
+       SET CNTname=?, role=?, CNDmobilenumber=?, CNDemail=?, CNDskills=?
+       WHERE id=?`,
+            [CNTname, role, CNDmobilenumber, CNDemail, CNDskills, id]
+        );
 
-    res.json({ success: true });
+        res.json({ message: "Updated" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Update failed" });
+    }
 });
 
-/* DELETE */
-app.delete("/api/candidates/:id", async (req, res) => {
-    await db.promise().query(
-        "DELETE FROM cadidatedetails WHERE id = ?",
-        [req.params.id]
-    );
-    res.json({ success: true });
+/* ===============================
+   DELETE CADIDATE
+================================ */
+app.delete("/api/cadidates/:id", async (req, res) => {
+    try {
+        await db.promise().query(
+            "DELETE FROM cadidatedetails WHERE id=?",
+            [req.params.id]
+        );
+
+        res.json({ message: "Deleted" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: "Delete failed" });
+    }
 });
 
-/* START */
+/* ===============================
+   SERVER
+================================ */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
     console.log(`🚀 Backend running on http://localhost:${PORT}`)

@@ -358,3 +358,128 @@ button {
 button:hover {
   opacity: 0.9;
 }
+/* ===== GLOBAL ===== */
+body {
+  margin: 0;
+  padding: 0;
+  background: #f0f2f5;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  color: #1c1e21;
+}
+
+/* ===== PAGE LAYOUT ===== */
+.dashboard-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+}
+
+/* ===== CARD ===== */
+.dashboard-card {
+  width: 100%;
+  max-width: 1200px;
+  background: #ffffff;
+  padding: 24px 28px;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== TITLE ===== */
+.dashboard-card h2 {
+  margin: 0 0 20px 0;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  color: #050505;
+}
+
+/* ===== TABLE WRAPPER ===== */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+/* ===== TABLE ===== */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* ===== HEADER ===== */
+.data-table thead th {
+  background: #f5f6f7;
+  padding: 12px 10px;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid #dadde1;
+  white-space: nowrap;
+}
+
+/* ===== ROWS ===== */
+.data-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.data-table tbody tr:hover {
+  background: #f7f8fa;
+}
+
+/* ===== CELLS ===== */
+.data-table td {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #ebecef;
+}
+
+/* ===== NAME & ROLE ===== */
+.data-table td:first-child,
+.data-table td:nth-child(2) {
+  font-weight: 500;
+}
+
+/* ===== DROPDOWNS ===== */
+.data-table select {
+  width: 70px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #ccd0d5;
+  background: #ffffff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ===== PREDICTION ===== */
+.data-table td:last-child {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+/* ===== COLOR HELPERS (OPTIONAL JS INLINE STYLE USES THESE COLORS) ===== */
+.low {
+  color: #e53935;
+}
+
+.medium {
+  color: #1877f2;
+}
+
+.high {
+  color: #2e7d32;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .dashboard-card {
+    padding: 16px;
+  }
+
+  .dashboard-card h2 {
+    font-size: 18px;
+  }
+
+  .data-table {
+    font-size: 13px;
+  }
+}

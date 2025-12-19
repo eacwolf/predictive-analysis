@@ -1,274 +1,195 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 interface Candidate {
-  id: number | null;
-  CNTname: string;
-  CNDmobilenumber: string;
-  CNDemail: string;
-  CNDskills: string;
-  experience?: number;
-  age?: number;
-  dob?: string;
+  id: number;
+  CNTname: string;          // from MySQL
+  role: string;             // from MySQL
+  CNDemail?: string;        // from MySQL
+  CNDmobilenumber?: string; // from MySQL
+  m1: number;
+  m2: number;
+  m3: number;
+  m4: number;
 }
+
+const OPTIONS = [0, 10, 20];
 
 const Dashboard = () => {
   const [data, setData] = useState<Candidate[]>([]);
-  const [filtered, setFiltered] = useState<Candidate[]>([]);
-
-  // Filters
-  const [experience, setExperience] = useState("");
-  const [age, setAge] = useState("");
-  const [dob, setDob] = useState("");
-  const [showFilter, setShowFilter] = useState(false);
 
   useEffect(() => {
-    fetchData();
+    fetchCandidates();
   }, []);
 
-  useEffect(() => {
-    applyFilters();
-  }, [experience, age, dob, data]);
-
-  const fetchData = async () => {
+  const fetchCandidates = async () => {
     const res = await axios.get("http://localhost:5000/api/candidates");
 
-    const enriched = res.data.map((c: Candidate) => ({
-      ...c,
-      experience: Math.floor(Math.random() * 10) + 1,
-      age: Math.floor(Math.random() * 30) + 20,
-      dob: "1998-01-01",
+    const normalized = res.data.map((c: any) => ({
+      id: c.id,
+      CNTname: c.CNTname,
+      role: c.role || "—",
+      CNDemail: c.CNDemail,
+      CNDmobilenumber: c.CNDmobilenumber,
+      m1: c.m1 ?? 0,
+      m2: c.m2 ?? 0,
+      m3: c.m3 ?? 0,
+      m4: c.m4 ?? 0,
     }));
 
-    setData(enriched);
-    setFiltered(enriched);
+    setData(normalized);
   };
 
-  const applyFilters = () => {
-    let result = [...data];
-
-    if (experience) {
-      result = result.filter(
-        (c) => c.experience && c.experience >= Number(experience)
-      );
-    }
-
-    if (age) {
-      result = result.filter((c) => c.age === Number(age));
-    }
-
-    if (dob) {
-      result = result.filter((c) => c.dob === dob);
-    }
-
-    setFiltered(result);
-  };
-
-  const handleChange = (
-    row: Candidate,
-    field: keyof Candidate,
-    value: string
+  const updateMetric = (
+    id: number,
+    field: "m1" | "m2" | "m3" | "m4",
+    value: number
   ) => {
-    setFiltered((prev) =>
-      prev.map((r) => (r === row ? { ...r, [field]: value } : r))
+    setData((prev) =>
+      prev.map((row) =>
+        row.id === id ? { ...row, [field]: value } : row
+      )
     );
   };
 
-  const addCandidate = () => {
-    const newRow: Candidate = {
-      id: null,
-      CNTname: "",
-      CNDmobilenumber: "",
-      CNDemail: "",
-      CNDskills: "",
-    };
-
-    setFiltered((prev) => [...prev, newRow]);
+  const calculatePrediction = (c: Candidate) => {
+    const total = c.m1 + c.m2 + c.m3 + c.m4;
+    return Math.round((total / 80) * 100);
   };
 
-  const saveRow = async (row: Candidate) => {
-    if (row.id === null) {
-      // INSERT
-      const res = await axios.post(
-        "http://localhost:5000/api/candidates",
-        row
-      );
-
-      setFiltered((prev) =>
-        prev.map((r) => (r === row ? res.data : r))
-      );
-      setData((prev) => [...prev, res.data]);
-    } else {
-      // UPDATE
-      await axios.put(
-        `http://localhost:5000/api/candidates/${row.id}`,
-        row
-      );
-    }
-
-    alert("Saved");
+  // Prediction color
+  const getPredictionColor = (value: number) => {
+    if (value <= 20) return "#d32f2f";
+    if (value <= 60) return "#f57c00";
+    return "#2e7d32";
   };
 
-  const deleteRow = async (row: Candidate) => {
-    if (row.id === null) {
-      setFiltered((prev) => prev.filter((r) => r !== row));
-      return;
-    }
+  // Metric color
+  const getMetricColor = (value: number) => {
+    if (value === 0) return "#d32f2f";
+    if (value === 10) return "#f57c00";
+    return "#2e7d32";
+  };
 
-    if (!window.confirm("Delete this row?")) return;
+  /* ===============================
+     PDF EXPORT (ADDED FEATURE)
+  =============================== */
+  const exportCadidatePDF = (row: Candidate) => {
+    const doc = new jsPDF();
 
-    await axios.delete(
-      `http://localhost:5000/api/candidates/${row.id}`
-    );
+    doc.setFontSize(18);
+    doc.text("Cadidate Details", 14, 20);
 
-    setFiltered((prev) => prev.filter((r) => r.id !== row.id));
-    setData((prev) => prev.filter((r) => r.id !== row.id));
+    doc.setFontSize(12);
+    (doc as any).autoTable({
+      startY: 30,
+      theme: "grid",
+      head: [["Field", "Value"]],
+      body: [
+        ["Name", row.CNTname],
+        ["Role", row.role],
+        ["Email", row.CNDemail || "-"],
+        ["Mobile Number", row.CNDmobilenumber || "-"],
+        ["M1", row.m1.toString()],
+        ["M2", row.m2.toString()],
+        ["M3", row.m3.toString()],
+        ["M4", row.m4.toString()],
+        ["Prediction (%)", `${calculatePrediction(row)}%`],
+      ],
+    });
+
+    // Auto-download to system
+    doc.save("export_data.pdf");
   };
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-card">
-        <div className="dashboard-header">
-          <h2>Candidate Dashboard</h2>
+        <h2 className="dashboard-title">
+          Candidate Joining Probability
+        </h2>
 
-          <div className="filter-wrapper">
-            <button
-              className="filter-btn"
-              onClick={() => setShowFilter(!showFilter)}
-            >
-              🔽 Filters
-            </button>
-
-            {showFilter && (
-              <div className="filter-dropdown">
-                <div className="filter-field">
-                  <label>Min Experience (Years)</label>
-                  <input
-                    type="number"
-                    value={experience}
-                    onChange={(e) => setExperience(e.target.value)}
-                  />
-                </div>
-
-                <div className="filter-field">
-                  <label>Age</label>
-                  <select
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                  >
-                    <option value="">All</option>
-                    {[20, 25, 30, 35, 40].map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="filter-field">
-                  <label>Date of Birth</label>
-                  <input
-                    type="date"
-                    value={dob}
-                    onChange={(e) => setDob(e.target.value)}
-                  />
-                </div>
-
-                <div className="filter-actions">
-                  <button
-                    onClick={() => {
-                      setExperience("");
-                      setAge("");
-                      setDob("");
-                      setFiltered(data);
-                    }}
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* TABLE */}
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Mobile</th>
-                <th>Email</th>
-                <th>Skills</th>
-                <th>Actions</th>
+                <th>Role</th>
+                <th>M1</th>
+                <th>M2</th>
+                <th>M3</th>
+                <th>M4</th>
+                <th>Prediction (%)</th>
+                <th>PDF</th>
               </tr>
             </thead>
 
             <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} style={{ textAlign: "center" }}>
-                    No data. Click “Add Candidate”.
-                  </td>
-                </tr>
-              )}
+              {data.map((row) => {
+                const prediction = calculatePrediction(row);
 
-              {filtered.map((row, index) => (
-                <tr key={row.id ?? index}>
-                  <td>
-                    <input
-                      value={row.CNTname}
-                      onChange={(e) =>
-                        handleChange(row, "CNTname", e.target.value)
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      value={row.CNDmobilenumber}
-                      onChange={(e) =>
-                        handleChange(
-                          row,
-                          "CNDmobilenumber",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      value={row.CNDemail}
-                      onChange={(e) =>
-                        handleChange(row, "CNDemail", e.target.value)
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      value={row.CNDskills}
-                      onChange={(e) =>
-                        handleChange(row, "CNDskills", e.target.value)
-                      }
-                    />
-                  </td>
-                  <td className="actions">
-                    <button onClick={() => saveRow(row)}>Save</button>
-                    <button
-                      className="delete"
-                      onClick={() => deleteRow(row)}
+                return (
+                  <tr key={row.id}>
+                    <td>{row.CNTname}</td>
+                    <td>{row.role}</td>
+
+                    {(["m1", "m2", "m3", "m4"] as const).map((metric) => (
+                      <td key={metric}>
+                        <select
+                          value={row[metric]}
+                          onChange={(e) =>
+                            updateMetric(
+                              row.id,
+                              metric,
+                              Number(e.target.value)
+                            )
+                          }
+                          style={{
+                            color: getMetricColor(row[metric]),
+                            fontWeight: 600,
+                          }}
+                        >
+                          {OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    ))}
+
+                    <td
+                      style={{
+                        fontWeight: 700,
+                        color: getPredictionColor(prediction),
+                      }}
                     >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                      {prediction}%
+                    </td>
+
+                    <td style={{ textAlign: "center" }}>
+                      <button
+                        onClick={() => exportCadidatePDF(row)}
+                        title="Download PDF"
+                        style={{
+                          background: "#1877f2",
+                          color: "#fff",
+                          border: "none",
+                          padding: "6px 8px",
+                          borderRadius: "4px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        📄
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        </div>
-
-        {/* ADD BUTTON */}
-        <div style={{ marginTop: "16px", textAlign: "center" }}>
-          <button onClick={addCandidate}>➕ Add Candidate</button>
         </div>
       </div>
     </div>
