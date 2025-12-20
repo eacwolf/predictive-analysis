@@ -3,12 +3,12 @@ import axios from "axios";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 
-interface Candidate {
+interface Cadidate {
   id: number;
-  CNTname: string;          // from MySQL
-  role: string;             // from MySQL
-  CNDemail?: string;        // from MySQL
-  CNDmobilenumber?: string; // from MySQL
+  CNTname: string;
+  role: string;
+  CNDemail?: string;
+  CNDmobilenumber?: string;
   m1: number;
   m2: number;
   m3: number;
@@ -18,14 +18,19 @@ interface Candidate {
 const OPTIONS = [0, 10, 20];
 
 const Dashboard = () => {
-  const [data, setData] = useState<Candidate[]>([]);
+  const [data, setData] = useState<Cadidate[]>([]);
+
+  /* 🔹 FILTER STATES (ADDED) */
+  const [showFilter, setShowFilter] = useState(false);
+  const [skillFilter, setSkillFilter] = useState("");
+  const [experienceFilter, setExperienceFilter] = useState("");
 
   useEffect(() => {
-    fetchCandidates();
+    fetchCadidates();
   }, []);
 
-  const fetchCandidates = async () => {
-    const res = await axios.get("http://localhost:5000/api/candidates");
+  const fetchCadidates = async () => {
+    const res = await axios.get("http://localhost:5000/api/cadidates");
 
     const normalized = res.data.map((c: any) => ({
       id: c.id,
@@ -54,29 +59,39 @@ const Dashboard = () => {
     );
   };
 
-  const calculatePrediction = (c: Candidate) => {
+  const calculatePrediction = (c: Cadidate) => {
     const total = c.m1 + c.m2 + c.m3 + c.m4;
     return Math.round((total / 80) * 100);
   };
 
-  // Prediction color
   const getPredictionColor = (value: number) => {
     if (value <= 20) return "#d32f2f";
     if (value <= 60) return "#f57c00";
     return "#2e7d32";
   };
 
-  // Metric color
   const getMetricColor = (value: number) => {
     if (value === 0) return "#d32f2f";
     if (value === 10) return "#f57c00";
     return "#2e7d32";
   };
 
-  /* ===============================
-     PDF EXPORT (ADDED FEATURE)
-  =============================== */
-  const exportCadidatePDF = (row: Candidate) => {
+  /* 🔹 FILTER LOGIC (ADDED) */
+  const filteredData = data.filter((row) => {
+    if (skillFilter && row.role !== skillFilter) return false;
+
+    if (experienceFilter) {
+      const experienceYears = Math.floor(
+        (row.m1 + row.m2 + row.m3 + row.m4) / 20
+      );
+      if (experienceYears < Number(experienceFilter)) return false;
+    }
+
+    return true;
+  });
+
+  /* 🔹 PDF EXPORT (UNCHANGED) */
+  const exportCadidatePDF = (row: Cadidate) => {
     const doc = new jsPDF();
 
     doc.setFontSize(18);
@@ -100,17 +115,79 @@ const Dashboard = () => {
       ],
     });
 
-    // Auto-download to system
     doc.save("export_data.pdf");
   };
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-card">
-        <h2 className="dashboard-title">
-          Candidate Joining Probability
-        </h2>
+        <div className="dashboard-header">
+          <h2 className="dashboard-title">
+            Candidate Joining Probability
+          </h2>
 
+          {/* 🔹 FILTER UI (ADDED) */}
+          <div className="filter-wrapper">
+            <button
+              className="filter-btn"
+              onClick={() => setShowFilter(!showFilter)}
+            >
+              🔽 Filters
+            </button>
+
+            {showFilter && (
+              <div className="filter-dropdown">
+                <div className="filter-field">
+                  <label>Skills</label>
+                  <select
+                    value={skillFilter}
+                    onChange={(e) =>
+                      setSkillFilter(e.target.value)
+                    }
+                  >
+                    <option value="">All</option>
+                    {[...new Set(data.map((d) => d.role))].map(
+                      (skill) => (
+                        <option key={skill} value={skill}>
+                          {skill}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
+
+                <div className="filter-field">
+                  <label>Years of Experience</label>
+                  <select
+                    value={experienceFilter}
+                    onChange={(e) =>
+                      setExperienceFilter(e.target.value)
+                    }
+                  >
+                    <option value="">All</option>
+                    <option value="1">1+ years</option>
+                    <option value="2">2+ years</option>
+                    <option value="3">3+ years</option>
+                    <option value="4">4+ years</option>
+                  </select>
+                </div>
+
+                <div className="filter-actions">
+                  <button
+                    onClick={() => {
+                      setSkillFilter("");
+                      setExperienceFilter("");
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* TABLE */}
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
@@ -127,7 +204,7 @@ const Dashboard = () => {
             </thead>
 
             <tbody>
-              {data.map((row) => {
+              {filteredData.map((row) => {
                 const prediction = calculatePrediction(row);
 
                 return (
@@ -135,30 +212,32 @@ const Dashboard = () => {
                     <td>{row.CNTname}</td>
                     <td>{row.role}</td>
 
-                    {(["m1", "m2", "m3", "m4"] as const).map((metric) => (
-                      <td key={metric}>
-                        <select
-                          value={row[metric]}
-                          onChange={(e) =>
-                            updateMetric(
-                              row.id,
-                              metric,
-                              Number(e.target.value)
-                            )
-                          }
-                          style={{
-                            color: getMetricColor(row[metric]),
-                            fontWeight: 600,
-                          }}
-                        >
-                          {OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    ))}
+                    {(["m1", "m2", "m3", "m4"] as const).map(
+                      (metric) => (
+                        <td key={metric}>
+                          <select
+                            value={row[metric]}
+                            onChange={(e) =>
+                              updateMetric(
+                                row.id,
+                                metric,
+                                Number(e.target.value)
+                              )
+                            }
+                            style={{
+                              color: getMetricColor(row[metric]),
+                              fontWeight: 600,
+                            }}
+                          >
+                            {OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      )
+                    )}
 
                     <td
                       style={{
