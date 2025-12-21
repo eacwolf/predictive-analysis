@@ -20,10 +20,13 @@ const OPTIONS = [0, 10, 20];
 const Dashboard = () => {
   const [data, setData] = useState<Cadidate[]>([]);
 
-  /* 🔹 FILTER STATES (ADDED) */
+  /* FILTER STATES */
   const [showFilter, setShowFilter] = useState(false);
   const [skillFilter, setSkillFilter] = useState("");
   const [experienceFilter, setExperienceFilter] = useState("");
+
+  /* SELECTION STATES (ADDED) */
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   useEffect(() => {
     fetchCadidates();
@@ -76,7 +79,7 @@ const Dashboard = () => {
     return "#2e7d32";
   };
 
-  /* 🔹 FILTER LOGIC (ADDED) */
+  /* FILTERED DATA */
   const filteredData = data.filter((row) => {
     if (skillFilter && row.role !== skillFilter) return false;
 
@@ -90,29 +93,64 @@ const Dashboard = () => {
     return true;
   });
 
-  /* 🔹 PDF EXPORT (UNCHANGED) */
-  const exportCadidatePDF = (row: Cadidate) => {
+  /* CHECKBOX HANDLERS */
+  const toggleRow = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((i) => i !== id)
+        : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (selectedIds.length === filteredData.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredData.map((r) => r.id));
+    }
+  };
+
+  /* EXPORT SELECTED (PDF) */
+  const exportSelectedPDF = () => {
+    const rows = filteredData.filter((r) =>
+      selectedIds.includes(r.id)
+    );
+
+    if (rows.length === 0) {
+      alert("Please select at least one record");
+      return;
+    }
+
     const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text("Cadidates Export", 14, 20);
 
-    doc.setFontSize(18);
-    doc.text("Cadidate Details", 14, 20);
-
-    doc.setFontSize(12);
     (doc as any).autoTable({
       startY: 30,
-      theme: "grid",
-      head: [["Field", "Value"]],
-      body: [
-        ["Name", row.CNTname],
-        ["Role", row.role],
-        ["Email", row.CNDemail || "-"],
-        ["Mobile Number", row.CNDmobilenumber || "-"],
-        ["M1", row.m1.toString()],
-        ["M2", row.m2.toString()],
-        ["M3", row.m3.toString()],
-        ["M4", row.m4.toString()],
-        ["Prediction (%)", `${calculatePrediction(row)}%`],
+      head: [
+        [
+          "Name",
+          "Role",
+          "Email",
+          "Mobile",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "Prediction %",
+        ],
       ],
+      body: rows.map((r) => [
+        r.CNTname,
+        r.role,
+        r.CNDemail || "-",
+        r.CNDmobilenumber || "-",
+        r.m1,
+        r.m2,
+        r.m3,
+        r.m4,
+        `${calculatePrediction(r)}%`,
+      ]),
     });
 
     doc.save("export_data.pdf");
@@ -126,80 +164,66 @@ const Dashboard = () => {
             Candidate Joining Probability
           </h2>
 
-          {/* 🔹 FILTER UI (ADDED) */}
-          <div className="filter-wrapper">
-            <button
-              className="filter-btn"
-              onClick={() => setShowFilter(!showFilter)}
-            >
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button className="filter-btn" onClick={() => setShowFilter(!showFilter)}>
               🔽 Filters
             </button>
 
-            {showFilter && (
-              <div className="filter-dropdown">
-                <div className="filter-field">
-                  <label>Skills</label>
-                  <select
-                    value={skillFilter}
-                    onChange={(e) =>
-                      setSkillFilter(e.target.value)
-                    }
-                  >
-                    <option value="">All</option>
-                    {[...new Set(data.map((d) => d.role))].map(
-                      (skill) => (
-                        <option key={skill} value={skill}>
-                          {skill}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-
-                <div className="filter-field">
-                  <label>Years of Experience</label>
-                  <select
-                    value={experienceFilter}
-                    onChange={(e) =>
-                      setExperienceFilter(e.target.value)
-                    }
-                  >
-                    <option value="">All</option>
-                    <option value="1">1+ years</option>
-                    <option value="2">2+ years</option>
-                    <option value="3">3+ years</option>
-                    <option value="4">4+ years</option>
-                  </select>
-                </div>
-
-                <div className="filter-actions">
-                  <button
-                    onClick={() => {
-                      setSkillFilter("");
-                      setExperienceFilter("");
-                    }}
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-            )}
+            <button
+              className="filter-btn"
+              onClick={exportSelectedPDF}
+              style={{ background: "#2e7d32" }}
+            >
+              📤 Export
+            </button>
           </div>
         </div>
 
-        {/* TABLE */}
+        {showFilter && (
+          <div className="filter-dropdown">
+            <div className="filter-field">
+              <label>Skills</label>
+              <select value={skillFilter} onChange={(e) => setSkillFilter(e.target.value)}>
+                <option value="">All</option>
+                {[...new Set(data.map((d) => d.role))].map((skill) => (
+                  <option key={skill} value={skill}>
+                    {skill}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-field">
+              <label>Years of Experience</label>
+              <select value={experienceFilter} onChange={(e) => setExperienceFilter(e.target.value)}>
+                <option value="">All</option>
+                <option value="1">1+ years</option>
+                <option value="2">2+ years</option>
+                <option value="3">3+ years</option>
+                <option value="4">4+ years</option>
+              </select>
+            </div>
+          </div>
+        )}
+
         <div className="table-wrapper">
           <table className="data-table">
             <thead>
               <tr>
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.length === filteredData.length && filteredData.length > 0}
+                    onChange={toggleAll}
+                  />
+                </th>
                 <th>Name</th>
                 <th>Role</th>
                 <th>M1</th>
                 <th>M2</th>
                 <th>M3</th>
                 <th>M4</th>
-                <th>Prediction (%)</th>
-                <th>PDF</th>
+                <th>Prediction</th>
               </tr>
             </thead>
 
@@ -209,60 +233,39 @@ const Dashboard = () => {
 
                 return (
                   <tr key={row.id}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(row.id)}
+                        onChange={() => toggleRow(row.id)}
+                      />
+                    </td>
                     <td>{row.CNTname}</td>
                     <td>{row.role}</td>
 
-                    {(["m1", "m2", "m3", "m4"] as const).map(
-                      (metric) => (
-                        <td key={metric}>
-                          <select
-                            value={row[metric]}
-                            onChange={(e) =>
-                              updateMetric(
-                                row.id,
-                                metric,
-                                Number(e.target.value)
-                              )
-                            }
-                            style={{
-                              color: getMetricColor(row[metric]),
-                              fontWeight: 600,
-                            }}
-                          >
-                            {OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      )
-                    )}
+                    {(["m1", "m2", "m3", "m4"] as const).map((metric) => (
+                      <td key={metric}>
+                        <select
+                          value={row[metric]}
+                          onChange={(e) =>
+                            updateMetric(row.id, metric, Number(e.target.value))
+                          }
+                          style={{
+                            color: getMetricColor(row[metric]),
+                            fontWeight: 600,
+                          }}
+                        >
+                          {OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    ))}
 
-                    <td
-                      style={{
-                        fontWeight: 700,
-                        color: getPredictionColor(prediction),
-                      }}
-                    >
+                    <td style={{ fontWeight: 700, color: getPredictionColor(prediction) }}>
                       {prediction}%
-                    </td>
-
-                    <td style={{ textAlign: "center" }}>
-                      <button
-                        onClick={() => exportCadidatePDF(row)}
-                        title="Download PDF"
-                        style={{
-                          background: "#1877f2",
-                          color: "#fff",
-                          border: "none",
-                          padding: "6px 8px",
-                          borderRadius: "4px",
-                          cursor: "pointer",
-                        }}
-                      >
-                        📄
-                      </button>
                     </td>
                   </tr>
                 );
