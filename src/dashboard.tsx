@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 interface Cadidate {
   id: number;
-  year_of_experience: number;
   CNTname: string;
   role: string;
+  year_of_experience: number;
   CNDemail?: string;
   CNDmobilenumber?: string;
   m1: number;
@@ -20,14 +21,15 @@ const OPTIONS = [0, 10, 20];
 
 const Dashboard = () => {
   const [data, setData] = useState<Cadidate[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   /* FILTER STATES */
   const [showFilter, setShowFilter] = useState(false);
   const [skillFilter, setSkillFilter] = useState("");
   const [experienceFilter, setExperienceFilter] = useState("");
 
-  /* SELECTION STATES */
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  /* EXPORT MENU */
+  const [showExport, setShowExport] = useState(false);
 
   useEffect(() => {
     fetchCadidates();
@@ -35,112 +37,79 @@ const Dashboard = () => {
 
   const fetchCadidates = async () => {
     const res = await axios.get("http://localhost:5000/api/cadidates");
-
-    const normalized = res.data.map((c: any) => ({
-      id: c.id,
-      CNTname: c.CNTname,
-      role: c.role || "—",
-      CNDemail: c.CNDemail,
-      CNDmobilenumber: c.CNDmobilenumber,
-      year_of_experience: c.year_of_experience ?? 0,
-      m1: c.m1 ?? 0,
-      m2: c.m2 ?? 0,
-      m3: c.m3 ?? 0,
-      m4: c.m4 ?? 0,
-    }));
-
-    setData(normalized);
-  };
-
-  /* AUTO-CLOSE FILTER */
-  const applyAndCloseFilter = () => {
-    setShowFilter(false);
-  };
-
-  const updateMetric = (
-    id: number,
-    field: "m1" | "m2" | "m3" | "m4",
-    value: number
-  ) => {
-    setData((prev) =>
-      prev.map((row) =>
-        row.id === id ? { ...row, [field]: value } : row
-      )
+    setData(
+      res.data.map((c: any) => ({
+        id: c.id,
+        CNTname: c.CNTname,
+        role: c.role || "—",
+        year_of_experience: c.year_of_experience || 0,
+        CNDemail: c.CNDemail,
+        CNDmobilenumber: c.CNDmobilenumber,
+        m1: c.m1 ?? 0,
+        m2: c.m2 ?? 0,
+        m3: c.m3 ?? 0,
+        m4: c.m4 ?? 0,
+      }))
     );
-  };
-
-  const calculatePrediction = (c: Cadidate) => {
-    const total = c.m1 + c.m2 + c.m3 + c.m4;
-    return Math.round((total / 80) * 100);
-  };
-
-  const getPredictionColor = (value: number) => {
-    if (value <= 20) return "#d32f2f";
-    if (value <= 60) return "#f57c00";
-    return "#2e7d32";
-  };
-
-  const getMetricColor = (value: number) => {
-    if (value === 0) return "#d32f2f";
-    if (value === 10) return "#f57c00";
-    return "#2e7d32";
   };
 
   /* FILTERED DATA */
   const filteredData = data.filter((row) => {
     if (skillFilter && row.role !== skillFilter) return false;
-
-    if (experienceFilter) {
-      if (row.year_of_experience < Number(experienceFilter)) {
-        return false;
-      }
-    }
-
+    if (
+      experienceFilter &&
+      row.year_of_experience < Number(experienceFilter)
+    )
+      return false;
     return true;
   });
 
   /* CHECKBOX HANDLERS */
   const toggleRow = (id: number) => {
     setSelectedIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((i) => i !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
   const toggleAll = () => {
-    if (
-      selectedIds.length === filteredData.length &&
-      filteredData.length > 0
-    ) {
-      setSelectedIds([]);
-    } else {
-      setSelectedIds(filteredData.map((r) => r.id));
-    }
+    setSelectedIds(
+      selectedIds.length === filteredData.length
+        ? []
+        : filteredData.map((r) => r.id)
+    );
   };
 
-  /* EXPORT SELECTED */
-  const exportSelectedPDF = () => {
-    const rows = filteredData.filter((r) =>
-      selectedIds.includes(r.id)
-    );
+  const selectedRows = filteredData.filter((r) =>
+    selectedIds.includes(r.id)
+  );
 
-    if (rows.length === 0) {
-      alert("Please select at least one record");
+  /* PREDICTION */
+  const calculatePrediction = (c: Cadidate) =>
+    Math.round(((c.m1 + c.m2 + c.m3 + c.m4) / 80) * 100);
+
+  const metricColor = (v: number) =>
+    v === 0 ? "#d32f2f" : v === 10 ? "#f57c00" : "#2e7d32";
+
+  const predictionColor = (v: number) =>
+    v <= 20 ? "#d32f2f" : v <= 60 ? "#f57c00" : "#2e7d32";
+
+  /* EXPORT PDF */
+  const exportPDF = () => {
+    if (!selectedRows.length) {
+      alert("Please select records to export");
       return;
     }
 
     const doc = new jsPDF();
-    doc.setFontSize(16);
     doc.text("Cadidates Export", 14, 20);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       startY: 30,
       head: [
         [
           "Name",
           "Role",
-          "Experience (Years)",
+          "Experience",
           "Email",
           "Mobile",
           "M1",
@@ -150,7 +119,7 @@ const Dashboard = () => {
           "Prediction %",
         ],
       ],
-      body: rows.map((r) => [
+      body: selectedRows.map((r) => [
         r.CNTname,
         r.role,
         r.year_of_experience,
@@ -165,157 +134,173 @@ const Dashboard = () => {
     });
 
     doc.save("export_data.pdf");
+    setShowExport(false);
+  };
+
+  /* EXPORT EXCEL */
+  const exportExcel = () => {
+    if (!selectedRows.length) {
+      alert("Please select records to export");
+      return;
+    }
+
+    const sheet = XLSX.utils.json_to_sheet(
+      selectedRows.map((r) => ({
+        Name: r.CNTname,
+        Role: r.role,
+        Experience: r.year_of_experience,
+        Email: r.CNDemail,
+        Mobile: r.CNDmobilenumber,
+        M1: r.m1,
+        M2: r.m2,
+        M3: r.m3,
+        M4: r.m4,
+        Prediction: `${calculatePrediction(r)}%`,
+      }))
+    );
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, sheet, "Cadidates");
+    XLSX.writeFile(wb, "export_data.xlsx");
+    setShowExport(false);
   };
 
   return (
     <div className="dashboard-page">
       <div className="dashboard-card">
         <div className="dashboard-header">
-          <h2 className="dashboard-title">
-            Candidate Joining Probability
-          </h2>
+          <h2>Candidate Joining Probability</h2>
 
           <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              className="filter-btn"
-              onClick={() => setShowFilter(!showFilter)}
-            >
+            <button className="filter-btn" onClick={() => setShowFilter(!showFilter)}>
               🔽 Filters
             </button>
 
-            <button
-              className="filter-btn"
-              onClick={exportSelectedPDF}
-              style={{ background: "#2e7d32" }}
-            >
-              📤 Export
-            </button>
+            <div className="filter-wrapper">
+              <button
+                className="filter-btn"
+                onClick={() => setShowExport(!showExport)}
+              >
+                📤 Export
+              </button>
+
+              {showExport && (
+                <div className="filter-dropdown">
+                  <button onClick={exportPDF}>📄 Export PDF</button>
+                  <button onClick={exportExcel}>📊 Export Excel</button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
         {showFilter && (
           <div className="filter-dropdown">
-            <div className="filter-field">
-              <label>Skills</label>
-              <select
-                value={skillFilter}
-                onChange={(e) => {
-                  setSkillFilter(e.target.value);
-                  applyAndCloseFilter();
-                }}
-              >
-                <option value="">All</option>
-                {[...new Set(data.map((d) => d.role))].map(
-                  (skill) => (
-                    <option key={skill} value={skill}>
-                      {skill}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
+            <label>Skills</label>
+            <select
+              value={skillFilter}
+              onChange={(e) => {
+                setSkillFilter(e.target.value);
+                setShowFilter(false);
+              }}
+            >
+              <option value="">All</option>
+              {[...new Set(data.map((d) => d.role))].map((r) => (
+                <option key={r}>{r}</option>
+              ))}
+            </select>
 
-            <div className="filter-field">
-              <label>Years of Experience</label>
-              <select
-                value={experienceFilter}
-                onChange={(e) => {
-                  setExperienceFilter(e.target.value);
-                  applyAndCloseFilter();
-                }}
-              >
-                <option value="">All</option>
-                <option value="1">1+ years</option>
-                <option value="2">2+ years</option>
-                <option value="3">3+ years</option>
-                <option value="4">4+ years</option>
-                <option value="5">5+ years</option>
-              </select>
-            </div>
+            <label>Experience</label>
+            <select
+              value={experienceFilter}
+              onChange={(e) => {
+                setExperienceFilter(e.target.value);
+                setShowFilter(false);
+              }}
+            >
+              <option value="">All</option>
+              <option value="1">1+ years</option>
+              <option value="2">2+ years</option>
+              <option value="3">3+ years</option>
+              <option value="4">4+ years</option>
+            </select>
           </div>
         )}
 
-        <div className="table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedIds.length === filteredData.length &&
-                      filteredData.length > 0
-                    }
-                    onChange={toggleAll}
-                  />
-                </th>
-                <th>Name</th>
-                <th>Role</th>
-                <th>M1</th>
-                <th>M2</th>
-                <th>M3</th>
-                <th>M4</th>
-                <th>Prediction</th>
-              </tr>
-            </thead>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  checked={
+                    selectedIds.length === filteredData.length &&
+                    filteredData.length > 0
+                  }
+                  onChange={toggleAll}
+                />
+              </th>
+              <th>Name</th>
+              <th>Role</th>
+              <th>M1</th>
+              <th>M2</th>
+              <th>M3</th>
+              <th>M4</th>
+              <th>Prediction</th>
+            </tr>
+          </thead>
 
-            <tbody>
-              {filteredData.map((row) => {
-                const prediction = calculatePrediction(row);
+          <tbody>
+            {filteredData.map((r) => {
+              const p = calculatePrediction(r);
 
-                return (
-                  <tr key={row.id}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(row.id)}
-                        onChange={() => toggleRow(row.id)}
-                      />
+              return (
+                <tr key={r.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(r.id)}
+                      onChange={() => toggleRow(r.id)}
+                    />
+                  </td>
+                  <td>{r.CNTname}</td>
+                  <td>{r.role}</td>
+
+                  {(["m1", "m2", "m3", "m4"] as const).map((m) => (
+                    <td key={m}>
+                      <select
+                        value={r[m]}
+                        onChange={(e) =>
+                          setData((prev) =>
+                            prev.map((row) =>
+                              row.id === r.id
+                                ? { ...row, [m]: Number(e.target.value) }
+                                : row
+                            )
+                          )
+                        }
+                        style={{
+                          color: metricColor(r[m]),
+                          fontWeight: 600,
+                        }}
+                      >
+                        {OPTIONS.map((o) => (
+                          <option key={o} value={o}>
+                            {o}
+                          </option>
+                        ))}
+                      </select>
                     </td>
-                    <td>{row.CNTname}</td>
-                    <td>{row.role}</td>
+                  ))}
 
-                    {(["m1", "m2", "m3", "m4"] as const).map(
-                      (metric) => (
-                        <td key={metric}>
-                          <select
-                            value={row[metric]}
-                            onChange={(e) =>
-                              updateMetric(
-                                row.id,
-                                metric,
-                                Number(e.target.value)
-                              )
-                            }
-                            style={{
-                              color: getMetricColor(row[metric]),
-                              fontWeight: 600,
-                            }}
-                          >
-                            {OPTIONS.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        </td>
-                      )
-                    )}
-
-                    <td
-                      style={{
-                        fontWeight: 700,
-                        color: getPredictionColor(prediction),
-                      }}
-                    >
-                      {prediction}%
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  <td style={{ color: predictionColor(p), fontWeight: 700 }}>
+                    {p}%
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
