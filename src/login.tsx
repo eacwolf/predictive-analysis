@@ -1,23 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 /* ---------- TYPES ---------- */
 type Mode = "login" | "signup" | "forgot";
 
 type User = {
+  id?: number;
   name: string;
   email: string;
-  password: string;
 };
-
-/* ---------- HELPERS ---------- */
-const hashPassword = (password: string) => btoa(password);
-
-const getUsers = (): User[] =>
-  JSON.parse(localStorage.getItem("users") || "[]");
-
-const saveUsers = (users: User[]) =>
-  localStorage.setItem("users", JSON.stringify(users));
 
 /* ---------- COMPONENT ---------- */
 const Login = () => {
@@ -29,58 +21,117 @@ const Login = () => {
 
   const navigate = useNavigate();
 
+  useEffect(() => {
+    setMessage("");
+  }, [mode]);
+
+  // Notify Navbar about current auth mode and respond to toggle events
+  useEffect(() => {
+    try { window.dispatchEvent(new CustomEvent('authMode', { detail: mode })); } catch (e) {}
+    const onToggle = () => setMode((m) => (m === 'login' ? 'signup' : 'login'));
+    window.addEventListener('authToggle', onToggle);
+    return () => {
+      window.removeEventListener('authToggle', onToggle);
+    };
+  }, [mode]);
+
+  // If a token exists in localStorage, set default Authorization header for axios
+  const existingToken = localStorage.getItem("token");
+  if (existingToken) axios.defaults.headers.common["Authorization"] = `Bearer ${existingToken}`;
+
   /* ---------- SIGN UP ---------- */
-  const handleSignup = () => {
-    const users = getUsers();
-    if (users.find((u) => u.email === email)) {
-      setMessage("User already exists");
+  const handleSignup = async () => {
+    if (!email || !password) {
+      setMessage("email and password required");
       return;
     }
 
-    users.push({
-      name,
-      email,
-      password: hashPassword(password),
-    });
-
-    saveUsers(users);
-    setMessage("Account created. Please sign in.");
-    setMode("login");
+    try {
+      const resp = await axios.post("http://localhost:5000/api/signup", { name, email, password });
+      if (resp.data && resp.data.ok) {
+        setMessage("Account created. Please sign in.");
+        setMode("login");
+      } else if (resp.data && resp.data.error) {
+        setMessage(String(resp.data.error));
+      }
+    } catch (e: any) {
+      setMessage(e?.response?.data?.error || e.message || "Signup failed");
+    }
   };
 
   /* ---------- LOGIN ---------- */
-  const handleLogin = () => {
-    const users = getUsers();
-    const user = users.find(
-      (u) =>
-        u.email === email &&
-        u.password === hashPassword(password)
-    );
-
-    if (!user) {
-      setMessage("Invalid email or password");
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setMessage("email and password required");
       return;
     }
 
-    localStorage.setItem("session", JSON.stringify(user));
-    navigate("/dashboard");
+    try {
+      const resp = await axios.post("http://localhost:5000/api/login", { email, password });
+      if (resp.data && resp.data.ok && resp.data.user) {
+        const u: User = resp.data.user;
+        const token = resp.data.token;
+        localStorage.setItem("session", JSON.stringify(u));
+        if (token) {
+          localStorage.setItem("token", token);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        }
+        try { window.dispatchEvent(new Event('authChanged')); } catch (e) {}
+        navigate("/connect-db");
+      } else {
+        setMessage(resp.data?.error || "Invalid credentials");
+      }
+    } catch (e: any) {
+      setMessage(e?.response?.data?.error || e.message || "Login failed");
+    }
   };
 
   /* ---------- FORGOT PASSWORD ---------- */
-  const handleForgot = () => {
-    const users = getUsers();
-    const user = users.find((u) => u.email === email);
-
-    if (!user) {
-      setMessage("Email not found");
+  const handleForgot = async () => {
+    if (!email) {
+      setMessage("email required");
       return;
     }
 
-    user.password = hashPassword("newpassword123");
-    saveUsers(users);
+    try {
+      const resp = await axios.post("http://localhost:5000/api/forgot-password", { email });
+      if (resp.data && resp.data.ok) {
+        // Try to extract a clear-text password from response
+        let newPassword: string | null = null;
+        if (resp.data.password) {
+          newPassword = String(resp.data.password);
+        } else if (typeof resp.data.message === 'string') {
+          // message format: "Password reset to: newpassword123"
+          const m = resp.data.message as string;
+          const parts = m.split(":");
+          if (parts.length > 1) {
+            newPassword = parts.slice(1).join(":").trim();
+          }
+        }
 
-    setMessage("Password reset to: newpassword123 (demo)");
-    setMode("login");
+        if (newPassword) {
+          setMessage(`Password reset — new password: ${newPassword}`);
+          setPassword(newPassword);
+          setMode("login");
+          // attempt to copy to clipboard for convenience (best-effort)
+          try {
+            if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(newPassword);
+              setMessage(`Password reset — new password copied to clipboard`);
+            }
+          } catch (e) {
+            // ignore clipboard errors
+          }
+        } else {
+          setMessage(String(resp.data.message || "Password reset (check email)"));
+          setMode("login");
+        }
+      } else {
+        setMessage(resp.data?.error || "Reset failed");
+      }
+    } catch (e: any) {
+      setMessage(e?.response?.data?.error || e.message || "Reset failed");
+    }
   };
 
   return (

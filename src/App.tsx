@@ -5,6 +5,14 @@ import Login from "./login";
 import DataConnect from "./dataconnect";
 import Dashboard from "./dashboard";
 
+const RequireAuth = ({ children }: { children: JSX.Element }) => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (!token) {
+    return <Navigate to="/login" replace />;
+  }
+  return children;
+};
+
 const App = () => {
   return (
     <BrowserRouter>
@@ -12,8 +20,22 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<Login />} />
-        <Route path="/connect-db" element={<DataConnect />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route
+          path="/connect-db"
+          element={
+            <RequireAuth>
+              <DataConnect />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <RequireAuth>
+              <Dashboard />
+            </RequireAuth>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
