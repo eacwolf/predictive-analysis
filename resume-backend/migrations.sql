@@ -1,0 +1,7 @@
+-- Add missing columns to cadidatedetails table
+ALTER TABLE cadidatedetails 
+ADD COLUMN m1 INT DEFAULT 0,
+ADD COLUMN m2 INT DEFAULT 0,
+ADD COLUMN m3 INT DEFAULT 0,
+ADD COLUMN m4 INT DEFAULT 0,
+ADD COLUMN m5 INT DEFAULT 0;

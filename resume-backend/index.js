@@ -61,7 +61,7 @@ app.post("/api/upload-parse", upload.single("file"), (req, res) => {
 });
 
 /* ---------------- IMPORT FROM UPLOADED FILE (server-side, batch) ---------------- */
-app.post("/api/import-file", authenticateToken, express.json(), async (req, res) => {
+app.post("/api/import-file", express.json(), authenticateToken, async (req, res) => {
     const { filename } = req.body || {};
     if (!filename) return res.status(400).json({ error: "filename is required" });
 
