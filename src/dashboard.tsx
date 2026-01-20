@@ -16,6 +16,7 @@ interface Cadidate {
   m2: number;
   m3: number;
   m4: number;
+  m5: number;
 }
 
 // Candidate shape as returned from the backend (partial / loose)
@@ -38,6 +39,7 @@ interface BackendCandidate {
   m2?: number | string;
   m3?: number | string;
   m4?: number | string;
+  m5?: number | string;
   [key: string]: unknown;
 }
 
@@ -93,6 +95,7 @@ const Dashboard = () => {
             m2: Number(c.m2 ?? 0),
             m3: Number(c.m3 ?? 0),
             m4: Number(c.m4 ?? 0),
+            m5: Number(c.m5 ?? 0),
           }))
         );
         } catch (e) {
@@ -171,7 +174,7 @@ const Dashboard = () => {
   // Immediate metric update: optimistic update in UI and persist to backend
   const handleMetricChange = async (
     id: number,
-    metric: 'm1' | 'm2' | 'm3' | 'm4',
+    metric: 'm1' | 'm2' | 'm3' | 'm4' | 'm5',
     value: number
   ) => {
     // store previous value to revert on error
@@ -194,7 +197,7 @@ const Dashboard = () => {
   /* PREDICTION */
   const calculatePrediction = (c: Cadidate) => {
     // Compute a percentage from the sum of metrics, then cap between 0 and 100
-    const raw = Math.round(((c.m1 + c.m2 + c.m3 + c.m4) / 80) * 100);
+    const raw = Math.round(((c.m1 + c.m2 + c.m3 + c.m4 + c.m5) / 100) * 100);
     const capped = Math.max(0, Math.min(100, raw));
     return capped;
   };
@@ -228,6 +231,7 @@ const Dashboard = () => {
           "M2",
           "M3",
           "M4",
+          "M5",
           "Prediction %",
         ],
       ],
@@ -241,6 +245,7 @@ const Dashboard = () => {
         r.m2,
         r.m3,
         r.m4,
+        r.m5,
         `${calculatePrediction(r)}%`,
       ]),
     });
@@ -267,6 +272,7 @@ const Dashboard = () => {
         M2: r.m2,
         M3: r.m3,
         M4: r.m4,
+        M5: r.m5,
         Prediction: `${calculatePrediction(r)}%`,
       }))
     );
@@ -367,6 +373,7 @@ const Dashboard = () => {
               <th>M2</th>
               <th>M3</th>
               <th>M4</th>
+              <th>M5</th>
               <th>Prediction</th>
               <th>Delete</th>
             </tr>
@@ -388,7 +395,7 @@ const Dashboard = () => {
                   <td>{r.name}</td>
                   <td>{r.role}</td>
 
-                  {(["m1", "m2", "m3", "m4"] as const).map((m) => (
+                  {(["m1", "m2", "m3", "m4", "m5"] as const).map((m) => (
                     <td key={m}>
                       <select
                         value={r[m]}

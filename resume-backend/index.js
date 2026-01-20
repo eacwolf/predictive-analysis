@@ -104,12 +104,14 @@ app.post("/api/import-file", authenticateToken, express.json(), async (req, res)
             const m2Raw = findValue(r, ["m2", "score2", "mark2", "marks2"]);
             const m3Raw = findValue(r, ["m3", "score3", "mark3", "marks3"]);
             const m4Raw = findValue(r, ["m4", "score4", "mark4", "marks4"]);
+            const m5Raw = findValue(r, ["m5", "score5", "mark5", "marks5"]);
 
             const year_of_experience = yoeRaw == null || yoeRaw === "" ? 0 : parseFloat(String(yoeRaw)) || 0;
             const m1 = m1Raw == null || m1Raw === "" ? 0 : parseInt(String(m1Raw), 10) || 0;
             const m2 = m2Raw == null || m2Raw === "" ? 0 : parseInt(String(m2Raw), 10) || 0;
             const m3 = m3Raw == null || m3Raw === "" ? 0 : parseInt(String(m3Raw), 10) || 0;
             const m4 = m4Raw == null || m4Raw === "" ? 0 : parseInt(String(m4Raw), 10) || 0;
+            const m5 = m5Raw == null || m5Raw === "" ? 0 : parseInt(String(m5Raw), 10) || 0;
 
             if (skills == null) {
                 skills = null;
@@ -136,6 +138,7 @@ app.post("/api/import-file", authenticateToken, express.json(), async (req, res)
                 m2,
                 m3,
                 m4,
+                m5,
             ]);
         }
 
@@ -150,8 +153,8 @@ app.post("/api/import-file", authenticateToken, express.json(), async (req, res)
         });
 
         // choose insert SQL based on whether user_id exists
-        const insertSqlWithUser = `INSERT INTO cadidatedetails (CNTname, role, CNDemail, CNDmobilenumber, CNDskills, year_of_experience, m1, m2, m3, m4, user_id) VALUES ?`;
-        const insertSqlNoUser = `INSERT INTO cadidatedetails (CNTname, role, CNDemail, CNDmobilenumber, CNDskills, year_of_experience, m1, m2, m3, m4) VALUES ?`;
+        const insertSqlWithUser = `INSERT INTO cadidatedetails (CNTname, role, CNDemail, CNDmobilenumber, CNDskills, year_of_experience, m1, m2, m3, m4, m5, user_id) VALUES ?`;
+        const insertSqlNoUser = `INSERT INTO cadidatedetails (CNTname, role, CNDemail, CNDmobilenumber, CNDskills, year_of_experience, m1, m2, m3, m4, m5) VALUES ?`;
 
         // batch insert to avoid huge single INSERT queries
         const BATCH = 200;
@@ -181,10 +184,10 @@ app.post("/api/import-file", authenticateToken, express.json(), async (req, res)
 });
 
 /* ---------------- UPDATE CANDIDATE ---------------- */
-// Partial update for candidate fields (m1,m2,m3,m4, role, year_of_experience, etc.)
+// Partial update for candidate fields (m1,m2,m3,m4,m5, role, year_of_experience, etc.)
 app.put('/api/candidate/:id', authenticateToken, async (req, res) => {
     const id = req.params.id;
-    const allowed = ['m1','m2','m3','m4','role','year_of_experience','CNTname','CNDemail','CNDmobilenumber'];
+    const allowed = ['m1','m2','m3','m4','m5','role','year_of_experience','CNTname','CNDemail','CNDmobilenumber'];
     const updates = [];
     const params = [];
 
@@ -298,6 +301,7 @@ app.get("/api/cadidates", authenticateToken, async (req, res) => {
             m2: Number(c.m2 ?? 0),
             m3: Number(c.m3 ?? 0),
             m4: Number(c.m4 ?? 0),
+            m5: Number(c.m5 ?? 0),
         }));
 
         res.json(normalized);
@@ -319,6 +323,7 @@ app.post("/api/init-db", (req, res) => {
         m2 INT DEFAULT 0,
         m3 INT DEFAULT 0,
         m4 INT DEFAULT 0,
+        m5 INT DEFAULT 0,
         user_id INT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     `;
@@ -368,12 +373,14 @@ app.post("/api/import-excel", authenticateToken, async (req, res) => {
         const m2Raw = findValue(r, ["m2", "score2", "mark2", "marks2"]);
         const m3Raw = findValue(r, ["m3", "score3", "mark3", "marks3"]);
         const m4Raw = findValue(r, ["m4", "score4", "mark4", "marks4"]);
+        const m5Raw = findValue(r, ["m5", "score5", "mark5", "marks5"]);
 
         const year_of_experience = yoeRaw == null || yoeRaw === "" ? 0 : parseFloat(String(yoeRaw)) || 0;
         const m1 = m1Raw == null || m1Raw === "" ? 0 : parseInt(String(m1Raw), 10) || 0;
         const m2 = m2Raw == null || m2Raw === "" ? 0 : parseInt(String(m2Raw), 10) || 0;
         const m3 = m3Raw == null || m3Raw === "" ? 0 : parseInt(String(m3Raw), 10) || 0;
         const m4 = m4Raw == null || m4Raw === "" ? 0 : parseInt(String(m4Raw), 10) || 0;
+        const m5 = m5Raw == null || m5Raw === "" ? 0 : parseInt(String(m5Raw), 10) || 0;
         // Normalize skills to string and truncate to avoid DB column overflow
         if (skills == null) {
             skills = null;
@@ -405,6 +412,7 @@ app.post("/api/import-excel", authenticateToken, async (req, res) => {
             m2,
             m3,
             m4,
+            m5,
         ]);
     }
 
@@ -420,8 +428,8 @@ app.post("/api/import-excel", authenticateToken, async (req, res) => {
         });
     });
 
-    const insertSqlWithUser = `INSERT INTO cadidatedetails (CNTname, role, CNDemail, CNDmobilenumber, CNDskills, year_of_experience, m1, m2, m3, m4, user_id) VALUES ?`;
-    const insertSqlNoUser = `INSERT INTO cadidatedetails (CNTname, role, CNDemail, CNDmobilenumber, CNDskills, year_of_experience, m1, m2, m3, m4) VALUES ?`;
+    const insertSqlWithUser = `INSERT INTO cadidatedetails (CNTname, role, CNDemail, CNDmobilenumber, CNDskills, year_of_experience, m1, m2, m3, m4, m5, user_id) VALUES ?`;
+    const insertSqlNoUser = `INSERT INTO cadidatedetails (CNTname, role, CNDemail, CNDmobilenumber, CNDskills, year_of_experience, m1, m2, m3, m4, m5) VALUES ?`;
 
     const uid = req.user ? req.user.id : null;
     const rowsToInsert = hasUserId ? values.map((v) => [...v, uid]) : values;
